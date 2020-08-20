@@ -89,7 +89,7 @@ while True:
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame,quit()
+            pygame.quit()
             quit()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
