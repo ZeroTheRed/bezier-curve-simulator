@@ -1,120 +1,155 @@
 import numpy as np
-import math
+import numpy.typing as npt
 import pygame
+import math
 
-pygame.init()
-surface = pygame.display.set_mode((800, 600))
-surface.fill((0,0,0))
+class BezierTools():
+    def gen_controlpoints(self) -> npt.ArrayLike:
+        n = int(input("How many Bezier control points? (> 2):  "))
+        ctrl_points = np.random.randint((0, 0), (self.width, self.height), (n, 2))
+        return ctrl_points
 
-def binomial(n, i):
-    return ( math.factorial(n) / ( math.factorial(n-i) * math.factorial(i) ) )
+    # generate Bernstein basis polynomial
+    # reference: https://en.wikipedia.org/wiki/Bernstein_polynomial
+    def bernstein(self, t, n, i) -> int:
+        return math.comb(n, i) * math.pow(t, i) * math.pow((1-t), (n-i))
+    
+    # generate Bezier curve points
+    # reference: [explicit terminology] https://en.wikipedia.org/wiki/B%C3%A9zier_curve
+    def bezier(self, points, t) -> tuple[float, float]:
+        degree = len(points) - 1
+        x = y = 0
+        for i, pos in enumerate(points):
+            bern_coeff = self.bernstein(t, degree, i)
+            x += pos[0] * bern_coeff
+            y += pos[1] * bern_coeff
+        return (x, y)
 
-def bernstein(t, n, i):
-    return binomial(n, i) * (t ** i) * ( (1 - t) ** (n - i))
+class MainWindow(BezierTools):
+    def __init__(self) -> None:
+        # window dimensions in px
+        # origin: top-left
+        self.height = 600
+        self.width = 800
 
-def bezier(points, t):
-    n = len(points) - 1
-    x = y = 0
-    for i, pos in enumerate(points):
-        x += pos[0] * bernstein(t, n, i)
-        y += pos[1] * bernstein(t, n, i)
-    return (x, y)
+        # colors are in (r, g, b) format
+        self.background_color = (0, 0, 0)
+        self.ctrl_point_color = (0, 255, 0)
+        self.ctrl_line_color = (100, 100, 100)
+        self.beziercurve_color = (255, 174, 0)
+        self.boundingbox_color = (255, 0, 255)
+        
+        # thicknesses are in px
+        self.ctrl_point_radius = 4
+        self.ctrl_line_thickness = 1
+        self.beziercurve_thickness = 2
+        self.boundingbox_thickness = 2
 
-def plot_points(points):
-    total = len(points)
-    for i in range(total):
-        pygame.draw.circle(surface, (0, 255, 0), points[i], 4)
+        # box edge length = boundingbox_size * 2
+        self.bboxes = None
+        self.boundingbox_size = 10
 
-def plot_lines(points):
-    line_total = len(points) - 1
-    for i in range(line_total):
-        pygame.draw.line(surface, (100, 100, 100), points[i], points[i+1], 1)
+        # bezier curve smoothness  
+        # higher the value, smoother the curve
+        self.beziercurve_smoothness = 1000
 
-def bezier_draw(points, n):
-    positions = []
-    samples = np.array(np.linspace(0, n, 1000))
-    for j in np.linspace(0, n-1, 1000):
-        t = j / (n - 1)
-        (pos_x, pos_y) = bezier(points, t)
-        positions.append((pos_x, pos_y))
-    pygame.draw.lines(surface, (255, 174, 0), False, positions, 2)
+        # text offset (y px)
+        self.text_offset = 15
 
-def bounding_boxes(points):
-    n = len(points)
-    for i in range(n):
-        x1, y1 = points[i][0] - 10, points[i][1] - 10
-        x2, y2 = points[i][0] + 10, points[i][1] + 10
-        boxes.append(pygame.Rect(x1, y1, x2-x1, y2-y1))
-        pygame.draw.rect(surface, (255,0,255), boxes[i], 2)
+        self.control_points = None
+        self.draggable = False
 
-def control_points_generator():
-    n = int(input("How many Bezier control points? (Enter a number greater than 2):  "))
-    ctrl_points = []
+        # initialize pygame instance and draw window
+        pygame.init()
+        self.surface = pygame.display.set_mode((self.width, self.height))
+        self.surface.fill(self.background_color)
+    
+    # pygame main loop
+    def main(self):
+        # Obtain number of control points from user terminal input -- degree
+        self.control_points = BezierTools.gen_controlpoints(self)
+        self.degree = self.control_points.shape[0]
 
-    for i in range(n):
-        ctrl_x = np.random.randint(0, 800)
-        ctrl_y = np.random.randint(0, 600)
-        ctrl_points.append([ctrl_x, ctrl_y])
+        while True:
+            self.draw_control_segs(self.control_points)
+            self.bboxes = self.draw_boundingboxes(self.control_points)
+            self.draw_beziercurve(self.control_points, self.degree)
+            self.text_on_bboxes(self.control_points)
+            pygame.display.update()
 
-    return ctrl_points
+            for event in pygame.event.get():
+                # Exit sequence
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
 
-def control_coordinates(points):
-    n = len(points)
-    text = []
-    textRect = []
-    font = pygame.font.Font('freesansbold.ttf', 16)
-    for i in range(n):
-        c_x = points[i][0]
-        c_y = points[i][1] - 15
-        coords = "(" + str(c_x) + "," + str(c_y) + ")"
-        text_render = font.render(coords, True, (0, 255, 0))
-        text.append(text_render)
-        textRect_rect = text[i].get_rect()
-        textRect.append(textRect_rect)
-        textRect[i].center = (c_x, c_y)
-        surface.blit(text[i], textRect[i])
+                # Upon mouse pressed, do this
+                # event.button == 1 is left mouse click
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        mouse_pos = pygame.mouse.get_pos()
+                        for idx, _ in enumerate(self.control_points):
+                            if self.bboxes[idx].collidepoint(mouse_pos):
+                                self.draggable = True
+                                mouse_x, mouse_y = mouse_pos
+                                offset_x = self.bboxes[idx].x - mouse_x
+                                offset_y = self.bboxes[idx].y - mouse_y
+                                break
 
-ctrl_points = control_points_generator()
-n = len(ctrl_points)
-drag_points = False
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == 1:
+                        self.draggable = False
 
-while True:
-    boxes = []
-    plot_points(ctrl_points)
-    bounding_boxes(ctrl_points)
-    plot_lines(ctrl_points)
-    bezier_draw(ctrl_points, n)
-    control_coordinates(ctrl_points)
-    pygame.display.update()
+                elif event.type == pygame.MOUSEMOTION:
+                    if self.draggable:
+                        mouse_x, mouse_y = event.pos
+                        self.control_points[idx][0] = mouse_x + offset_x
+                        self.control_points[idx][1] = mouse_y + offset_y
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            quit()
+            self.surface.fill(self.background_color)
 
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-           if event.button == 1:
-               mouse_pos = pygame.mouse.get_pos()
-               for i in range(n):
-                   if boxes[i].collidepoint(mouse_pos):
-                       drag_points = True
-                       mouse_x, mouse_y = mouse_pos
-                       offset_x = boxes[i].x - mouse_x
-                       offset_y = boxes[i].y - mouse_y
-                       break
+    # Plot bezier control points and lines on screen
+    def draw_control_segs(self, points) -> None:
+        for i, ctrl_pt in enumerate(points):
+            # plot control points
+            pygame.draw.circle(self.surface, self.ctrl_point_color, ctrl_pt, self.ctrl_point_radius)
 
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 1:
-                   drag_points = False
+            # draw lines between control points
+            if i < len(points)-1:
+                pygame.draw.line(self.surface, self.ctrl_line_color, ctrl_pt, points[i+1], self.ctrl_line_thickness)
 
-        elif event.type == pygame.MOUSEMOTION:
-            if drag_points:
-                mouse_x, mouse_y = event.pos
-                ctrl_points[i][0] = mouse_x + offset_x
-                ctrl_points[i][1] = mouse_y + offset_y
+    # Plot the bezier curve itself
+    def draw_beziercurve(self, points, n) -> None:
+        bezier_coords = []
+        # 0 <= t <= 1
+        sample_points = np.linspace(0, 1, self.beziercurve_smoothness)
+        for idx, t in enumerate(sample_points):
+            bezier_coords.append(BezierTools.bezier(self, points, t))
+        pygame.draw.lines(self.surface, self.beziercurve_color, False, bezier_coords, self.beziercurve_thickness)
 
-    surface.fill((0,0,0))
+    # Draw bounding boxes on the control points
+    def draw_boundingboxes(self, points: npt.ArrayLike) -> list:
+        boxes = []
+        for i, point in enumerate(points):
+            left, top = point - self.boundingbox_size
+            rect = pygame.Rect(left, top, self.boundingbox_size*2, self.boundingbox_size*2)
+            boxes.append(rect)
+            pygame.draw.rect(self.surface, self.boundingbox_color, boxes[i], self.boundingbox_thickness)
+        return boxes
 
+    # Draw text on bounding boxes showing the x,y coords of control point
+    def text_on_bboxes(self, points: npt.ArrayLike) -> None:
+        text = []
+        text_rect = []
+        font = pygame.font.Font('freesansbold.ttf', 16)
+        for idx, point in enumerate(points):
+            coord_text = f"({point})"
+            text_render = font.render(coord_text, True, self.ctrl_point_color)
+            text.append(text_render)
+            text_rect.append(text_render.get_rect())
+            text_rect[idx].center = (point[0], point[1]-self.text_offset)
+            self.surface.blit(text[idx], text_rect[idx])
 
-
-
+if __name__ == "__main__":
+    window = MainWindow()
+    window.main()
