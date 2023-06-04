@@ -4,8 +4,9 @@ import pygame
 import math
 
 class BezierTools():
+    # generate control points from terminal user input. Minimum 2 points
     def gen_controlpoints(self) -> npt.ArrayLike:
-        n = int(input("How many Bezier control points? (> 2):  "))
+        n = int(input("How many Bezier control points? (>= 2):  "))
         ctrl_points = np.random.randint((0, 0), (self.width, self.height), (n, 2))
         return ctrl_points
 
