@@ -9,5 +9,3 @@ pip install numpy dearpygui
 
 When you execute the program, enter the number of control points (atleast 2). 
 Use the mouse pointer to drag and play around with the points to see how the curve changes 
-
-![Bezier curve simulation](bezier.png)
