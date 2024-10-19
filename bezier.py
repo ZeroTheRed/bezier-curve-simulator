@@ -1,5 +1,3 @@
-from random import sample
-
 import numpy as np
 import numpy.typing as npt
 import math
@@ -40,6 +38,7 @@ def generate_bezier(points, t) -> tuple[float, float]:
         x += pos[0] * bern_coeff
         y += pos[1] * bern_coeff
     return (x, y)
+
 
 def bezier_curve_points(degree, smoothness):
     """
