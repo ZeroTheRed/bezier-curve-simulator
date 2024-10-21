@@ -13,5 +13,6 @@ Use the mouse pointer to drag and play around with the points to see how the cur
 ![Bezier curve simulation](/assets/bezier-img.png)
 
 ## To-do
-- Add the option to overlay multiple Bezier curves
-- Introduce Bezier splines
+- [ ] Add the option to overlay multiple Bezier curves
+- [ ] Introduce Bezier splines
+- [ ] Develop unit tests

@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 from collections.abc import Iterable
 import bezier as bz
 
+
 class BezierSimulator:
     def __init__(self) -> None:
         self.showcoords_flag = True
@@ -60,7 +61,9 @@ class BezierSimulator:
         :returns bezier_coords: The Bezier curve data
         :returns ctrl_points: The control points themselves
         """
-        self.bezier_coords, self.ctrl_points = bz.bezier_curve_points(n_ctrl, smoothness)
+        self.bezier_coords, self.ctrl_points = bz.bezier_curve_points(
+            n_ctrl, smoothness
+        )
         return self.bezier_coords, self.ctrl_points
 
     def annotate_plot(self, ctrl_points: Iterable):
@@ -69,7 +72,8 @@ class BezierSimulator:
 
         :param ctrl_points: The control points, as an array
         """
-        if dpg.does_alias_exist("curvetype"): dpg.remove_alias("curvetype")
+        if dpg.does_alias_exist("curvetype"):
+            dpg.remove_alias("curvetype")
         if self.showcoords_flag:
             for i, (x, y) in enumerate(ctrl_points):
                 dpg.add_plot_annotation(
@@ -114,7 +118,9 @@ class BezierSimulator:
 
             with dpg.theme_component(dpg.mvScatterSeries):
                 dpg.add_theme_color(
-                    dpg.mvPlotCol_Line, (238, 89, 255, 255), category=dpg.mvThemeCat_Plots
+                    dpg.mvPlotCol_Line,
+                    (238, 89, 255, 255),
+                    category=dpg.mvThemeCat_Plots,
                 )
                 dpg.add_theme_style(
                     dpg.mvPlotStyleVar_Marker,
@@ -144,7 +150,9 @@ class BezierSimulator:
         self.n_ctrl_points = dpg.get_value("ctrl_pts")
         self.smoothness = dpg.get_value("smooth")
 
-        self.bezier_coords, self.ctrl_points = self.generate_bezier(self.n_ctrl_points, self.smoothness)
+        self.bezier_coords, self.ctrl_points = self.generate_bezier(
+            self.n_ctrl_points, self.smoothness
+        )
 
         bezier_coords_x, bezier_coords_y = zip(*self.bezier_coords)
         ctrl_points_x, ctrl_points_y = zip(*self.ctrl_points)
@@ -197,4 +205,3 @@ class BezierSimulator:
                     dpg.show_item(f"annotation_{i}")
             else:
                 self.annotate_plot(self.ctrl_points)
-
