@@ -10,10 +10,13 @@ class BezierSimulator:
 
     def show(self):
         dpg.create_context()
-        dpg.create_viewport(title="Bezier Curve Generator", width=600, height=600)
+        dpg.create_viewport(title="Bezier Curve Generator", width=1300, height=750, resizable=False)
+        dpg.setup_dearpygui()
 
-        with dpg.window(tag="Primary Window"):
-            with dpg.group(horizontal=True):
+        with dpg.window(tag="beziergraph", pos=(0,0)):
+            dpg.set_primary_window('beziergraph', True)
+
+            with dpg.child_window(tag='settings', pos=(1000, 0), width=300, height=750):
                 dpg.add_input_int(
                     label="Control points", width=100, tag="ctrl_pts", default_value=4
                 )
@@ -21,17 +24,16 @@ class BezierSimulator:
                     label="Smoothness", width=100, tag="smooth", default_value=1000
                 )
 
-            dpg.add_checkbox(
-                label="Show coordinates",
-                default_value=True,
-                callback=self.toggle_coords,
-                tag="show_coords",
-            )
-            dpg.add_button(label="Generate Curve", callback=self.draw_bezier)
+                dpg.add_checkbox(
+                    label="Show coordinates",
+                    default_value=True,
+                    callback=self.toggle_coords,
+                    tag="show_coords",
+                )
+                dpg.add_button(label="Generate Curve", callback=self.draw_bezier)
 
-        dpg.setup_dearpygui()
+        
         dpg.show_viewport()
-        dpg.set_primary_window("Primary Window", True)
         dpg.start_dearpygui()
         dpg.destroy_context()
 
@@ -159,10 +161,10 @@ class BezierSimulator:
 
         with dpg.plot(
             label="Bezier Curve",
-            parent="Primary Window",
+            parent="beziergraph",
             tag="bezier_plot",
-            width=600,
-            height=400,
+            width=980,
+            height=750,
         ):
             dpg.add_plot_axis(dpg.mvXAxis, label="X", tag="bezier_x")
             dpg.add_plot_axis(dpg.mvYAxis, label="Y", tag="bezier_y")
